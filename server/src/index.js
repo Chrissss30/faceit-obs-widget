@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const cheerio = require('cheerio');
@@ -30,6 +30,41 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
+function pickPrimaryGame(games = {}) {
+  if (games.cs2) return { key: 'cs2', data: games.cs2 };
+  if (games.csgo) return { key: 'csgo', data: games.csgo };
+  const [firstKey] = Object.keys(games);
+  return firstKey ? { key: firstKey, data: games[firstKey] } : { key: 'cs2', data: {} };
+}
+
+async function fetchRankingPosition({ apiKey, game, region, playerId }) {
+  if (!apiKey || !game || !region || !playerId) return null;
+
+  try {
+    const rankingResp = await axios.get(
+      `https://open.faceit.com/data/v4/rankings/games/${encodeURIComponent(game)}/regions/${encodeURIComponent(region)}/players/${encodeURIComponent(playerId)}`,
+      {
+        headers: { Authorization: `Bearer ${apiKey}` },
+        timeout: 8000,
+        validateStatus: null
+      }
+    );
+
+    if (rankingResp.status === 200 && rankingResp.data) {
+      const pos =
+        Number(rankingResp.data.position) ||
+        Number(rankingResp.data.rank) ||
+        Number(rankingResp.data.place) ||
+        null;
+      return Number.isFinite(pos) ? pos : null;
+    }
+  } catch (err) {
+    console.error('Erro ao buscar ranking:', err.message);
+  }
+
+  return null;
+}
+
 // Função para fazer scraping do perfil FACEIT
 async function scrapePlayerProfile(nickname) {
   // Se FACEIT API key estiver configurada, usa a API oficial primeiro
@@ -45,18 +80,34 @@ async function scrapePlayerProfile(nickname) {
 
       if (playerResp.status === 200 && playerResp.data) {
         const pdata = playerResp.data;
-        // Tenta extrair elo para CS:GO
-        const elo = pdata.games?.csgo?.faceit_elo || pdata.faceit_elo || 'N/A';
+        const primaryGame = pickPrimaryGame(pdata.games || {});
+        const gameData = primaryGame.data || {};
+        const playerId = pdata.player_id || pdata.playerId || pdata._id || pdata.id;
+        const gameRegion = gameData.region || pdata.country || 'SA';
+
+        const elo = gameData.faceit_elo || pdata.faceit_elo || 'N/A';
+        const level = gameData.skill_level || pdata.skill_level || null;
+        const levelIconUrl =
+          gameData.skill_level_icon ||
+          gameData.level_icon ||
+          gameData.icon ||
+          null;
         const resolvedNickname = pdata.nickname || pdata.player_name || pdata.player_id || nickname;
+        const rankingPosition = await fetchRankingPosition({
+          apiKey: FACEIT_API_KEY,
+          game: primaryGame.key,
+          region: gameRegion,
+          playerId
+        });
+        const isTop1000 = Number.isFinite(rankingPosition) && rankingPosition > 0 && rankingPosition <= 1000;
 
         // Tenta buscar histórico de partidas para contar wins/losses/eloChange do dia
         let wins = 0;
         let losses = 0;
         let eloChanges = [];
         try {
-          const playerId = pdata.player_id || pdata.playerId || pdata._id || pdata.id;
           if (playerId) {
-            const historyResp = await axios.get(`https://open.faceit.com/data/v4/players/${playerId}/history?game=csgo&limit=50`, {
+            const historyResp = await axios.get(`https://open.faceit.com/data/v4/players/${playerId}/history?game=${encodeURIComponent(primaryGame.key)}&limit=50`, {
               headers: { Authorization: `Bearer ${FACEIT_API_KEY}` },
               timeout: 8000,
               validateStatus: null
@@ -125,7 +176,19 @@ async function scrapePlayerProfile(nickname) {
           eloChange = Math.round(sum / eloChanges.length);
         }
 
-        return { nickname: resolvedNickname, elo, ranking: 'N/A', wins, losses, eloChange };
+        return {
+          nickname: resolvedNickname,
+          game: primaryGame.key,
+          level,
+          levelIconUrl,
+          elo,
+          ranking: isTop1000 ? `#${rankingPosition}` : 'N/A',
+          rankingPosition: rankingPosition || null,
+          isTop1000,
+          wins,
+          losses,
+          eloChange
+        };
       }
     } catch (err) {
       console.error('Erro na FACEIT API:', err.message);
@@ -191,8 +254,12 @@ async function scrapePlayerProfile(nickname) {
     // Extrai dados de vitórias/derrotas
     // Isso geralmente está no histórico de partidas
     const stats = {
+      level: null,
+      levelIconUrl: null,
       elo: elo,
       ranking: ranking,
+      rankingPosition: ranking !== 'N/A' ? Number(String(ranking).replace('#', '')) || null : null,
+      isTop1000: ranking !== 'N/A',
       wins: 0,
       losses: 0,
       nickname: nickname
@@ -254,5 +321,7 @@ app.get('/api/health', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`🎮 Servidor FACEIT Widget rodando em http://localhost:${PORT}`);
+  console.log(`Servidor FACEIT Widget rodando em http://localhost:${PORT}`);
 });
+
+

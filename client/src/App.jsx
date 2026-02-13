@@ -1,40 +1,86 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import './App.css';
 
+const FACEIT_LEVEL_ICONS = {
+  1: 'https://support.faceit.com/hc/article_attachments/11345480868764',
+  2: 'https://support.faceit.com/hc/article_attachments/11345494083356',
+  3: 'https://support.faceit.com/hc/article_attachments/11345519346332',
+  4: 'https://support.faceit.com/hc/article_attachments/11345507782300',
+  5: 'https://support.faceit.com/hc/article_attachments/11345494079004',
+  6: 'https://support.faceit.com/hc/article_attachments/11345526591772',
+  7: 'https://support.faceit.com/hc/article_attachments/11345507775388',
+  8: 'https://support.faceit.com/hc/article_attachments/11345494072220',
+  9: 'https://support.faceit.com/hc/article_attachments/11345519335964',
+  10: 'https://support.faceit.com/hc/article_attachments/11345507770524'
+};
+const FACEIT_RANK_HASH_ICON = './assets/svg/challenger-icon.svg';
+
 function App() {
-  const [nickname, setNickname] = useState('');
+  const params = useMemo(() => new URLSearchParams(window.location.search), []);
+  const isObsMode = params.get('obs') === '1';
+  const nickFromUrl = params.get('nick') || '';
+  const lastSavedNick = localStorage.getItem('faceit_last_nickname') || '';
+  const initialNickname = nickFromUrl || lastSavedNick;
+
+  const [nickname, setNickname] = useState(initialNickname);
+  const [activeNickname, setActiveNickname] = useState(initialNickname);
+  const [displayNickname, setDisplayNickname] = useState(initialNickname);
   const [playerData, setPlayerData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(true);
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
+  const inferLevelFromElo = (eloValue) => {
+    const elo = Number(eloValue);
+    if (!Number.isFinite(elo) || elo <= 0) return 0;
+    if (elo <= 800) return 1;
+    if (elo <= 950) return 2;
+    if (elo <= 1100) return 3;
+    if (elo <= 1250) return 4;
+    if (elo <= 1400) return 5;
+    if (elo <= 1550) return 6;
+    if (elo <= 1750) return 7;
+    if (elo <= 2000) return 8;
+    if (elo <= 2250) return 9;
+    return 10;
+  };
+
   const fetchPlayerData = async (playerNick) => {
-    if (!playerNick.trim()) {
-      setError('Digite um nickname válido');
+    const normalizedNick = playerNick.trim();
+    if (!normalizedNick) {
+      setError('Digite um nickname valido');
       return;
     }
 
+    setDisplayNickname(normalizedNick);
+    setActiveNickname(normalizedNick);
+    localStorage.setItem('faceit_last_nickname', normalizedNick);
     setLoading(true);
     setError('');
 
     try {
-      // Evita cache do navegador adicionando timestamp e instrução de cache
-      const url = `${API_URL}/api/player/${playerNick}?t=${Date.now()}`;
-      const response = await fetch(url, { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } });
-      // Se status não for OK, tenta ler o json ou mostrar erro genérico
+      const url = `${API_URL}/api/player/${encodeURIComponent(normalizedNick)}?t=${Date.now()}`;
+      const response = await fetch(url, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' }
+      });
+
       if (!response.ok) {
         let body = null;
-        try { body = await response.json(); } catch (e) { /* ignore */ }
-        setError(body?.error || 'Não foi possível buscar o perfil. Verifique o nickname.');
+        try {
+          body = await response.json();
+        } catch (_e) {
+          // ignore
+        }
+        setError(body?.error || 'Nao foi possivel buscar o perfil. Verifique o nickname.');
         setPlayerData(null);
         setLoading(false);
         return;
       }
 
       const data = await response.json();
-
       if (data.error) {
         setError(data.error);
         setPlayerData(null);
@@ -55,78 +101,113 @@ function App() {
     fetchPlayerData(nickname);
   };
 
-  // Auto-refresh a cada 30 segundos
   useEffect(() => {
-    if (!autoRefresh || !nickname) return;
+    if (initialNickname) fetchPlayerData(initialNickname);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-    const interval = setInterval(() => {
-      fetchPlayerData(nickname);
-    }, 30000);
-
+  useEffect(() => {
+    if (!autoRefresh || !activeNickname) return;
+    const interval = setInterval(() => fetchPlayerData(activeNickname), 30000);
     return () => clearInterval(interval);
-  }, [autoRefresh, nickname]);
+  }, [autoRefresh, activeNickname]);
 
-  // Calcular mudança de ELO com +/- formato
   const formatEloChange = (change) => {
     if (!change || change === 0) return '(+0)';
     if (change > 0) return `(+${change})`;
     return `(${change})`;
   };
 
-  return (
-    <div className="app">
-      <div className="search-container">
-        <form onSubmit={handleSearch} className="search-form">
-          <input
-            type="text"
-            placeholder="Nickname FACEIT"
-            value={nickname}
-            onChange={(e) => setNickname(e.target.value)}
-            className="input"
-          />
-          <button type="submit" className="btn-search" disabled={loading}>
-            {loading ? '...' : 'Go'}
-          </button>
-        </form>
-      </div>
+  const effectiveLevel =
+    Number(playerData?.level) > 0 ? Number(playerData.level) : inferLevelFromElo(playerData?.elo);
 
-      {error && <div className="error-message">{error}</div>}
+  const top1000 = Boolean(playerData?.isTop1000 && playerData?.rankingPosition);
+  const levelIcon = FACEIT_LEVEL_ICONS[effectiveLevel] || playerData?.levelIconUrl || '';
+
+  return (
+    <div className={`app ${isObsMode ? 'obs-mode' : ''}`}>
+      {!isObsMode && (
+        <div className="search-container">
+          <form onSubmit={handleSearch} className="search-form">
+            <input
+              type="text"
+              placeholder="Nickname FACEIT"
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+              className="input"
+            />
+            <button type="submit" className="btn-search" disabled={loading}>
+              {loading ? '...' : 'Go'}
+            </button>
+          </form>
+        </div>
+      )}
+
+      {error && !isObsMode && <div className="error-message">{error}</div>}
 
       {playerData && !error && (
         <div className="widget-display">
           <div className="widget-bar">
-            <span className="nick">{playerData.nickname}</span>
-            <span className="separator">|</span>
-            <span className="elo-info">
+            <div className="left-icon-slot">
+              {top1000 ? (
+                <div className="top-rank-badge" title={`Top ${playerData.rankingPosition}`}>
+                  <span className="top-rank-number">#{playerData.rankingPosition}</span>
+                  <span className="top-rank-emblem-wrap">
+                    <img src={FACEIT_RANK_HASH_ICON} alt="" className="top-rank-right-icon" />
+                  </span>
+                </div>
+              ) : levelIcon ? (
+                <img src={levelIcon} alt={`Level ${effectiveLevel}`} className="level-icon" />
+              ) : (
+                <div className="level-pill">{effectiveLevel || 0}</div>
+              )}
+            </div>
+
+            <div className="identity">
+              <span className="nick">{displayNickname || playerData.nickname}</span>
               <span className="elo-value">{playerData.elo}</span>
-              <span className="elo-label">ELO</span>
-              <span className="elo-change" style={{ color: (playerData.eloChange || 0) > 0 ? '#00ff00' : (playerData.eloChange || 0) < 0 ? '#ff4444' : '#aaa' }}>
+              <span
+                className="elo-change"
+                style={{
+                  color:
+                    (playerData.eloChange || 0) > 0
+                      ? '#44ff8a'
+                      : (playerData.eloChange || 0) < 0
+                        ? '#ff4e4e'
+                        : '#c2c8d0'
+                }}
+              >
                 {formatEloChange(playerData.eloChange || 0)}
               </span>
-            </span>
-            <span className="separator">|</span>
-            <span className="w-l-info">
-              <span className="wins">{playerData.wins}W</span>
-              <span className="separator-small">·</span>
-              <span className="losses">{playerData.losses}L</span>
-            </span>
+            </div>
+
+            <div className="result-boxes">
+              <span className="result-box win-box">{playerData.wins}</span>
+              <span className="result-box loss-box">{playerData.losses}</span>
+            </div>
           </div>
 
-          <label className="auto-refresh">
-            <input
-              type="checkbox"
-              checked={autoRefresh}
-              onChange={(e) => setAutoRefresh(e.target.checked)}
-            />
-            Auto (30s)
-          </label>
+          {!isObsMode && (
+            <label className="auto-refresh">
+              <input
+                type="checkbox"
+                checked={autoRefresh}
+                onChange={(e) => setAutoRefresh(e.target.checked)}
+              />
+              Auto (30s)
+            </label>
+          )}
         </div>
       )}
 
-      <div className="info-section">
-        <p>Para usar no OBS: Adicionar → Browser Source e copiar a URL</p>
-        <code className="url-example">http://localhost:3000</code>
-      </div>
+      {!isObsMode && (
+        <div className="info-section">
+          <p>Para usar no OBS: Adicionar -&gt; Browser Source e copiar a URL</p>
+          <code className="url-example">
+            http://localhost:3000?obs=1&amp;nick={nickname || 'SEU_NICK'}
+          </code>
+        </div>
+      )}
     </div>
   );
 }
