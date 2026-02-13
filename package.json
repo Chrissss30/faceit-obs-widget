@@ -1,0 +1,11 @@
+{
+  "name": "faceit-obs-widget",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Monorepo do Faceit OBS Widget (Railway root entrypoint)",
+  "scripts": {
+    "postinstall": "npm --prefix server install",
+    "start": "npm --prefix server start",
+    "build": "echo \"No root build required\""
+  }
+}
