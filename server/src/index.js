@@ -54,7 +54,7 @@ async function scrapePlayerProfile(nickname) {
         let losses = 0;
         let eloChanges = [];
         try {
-          const playerId = pdata.player_id || pdata.playerId || pdata.player_id || pdata.player_id || pdata._id || pdata.id;
+          const playerId = pdata.player_id || pdata.playerId || pdata._id || pdata.id;
           if (playerId) {
             const historyResp = await axios.get(`https://open.faceit.com/data/v4/players/${playerId}/history?game=csgo&limit=50`, {
               headers: { Authorization: `Bearer ${FACEIT_API_KEY}` },
@@ -114,6 +114,7 @@ async function scrapePlayerProfile(nickname) {
             }
           }
         } catch (e) {
+          console.error('Erro ao buscar histórico:', e.message);
           // falha ao obter histórico - subir com wins/losses = 0
         }
 
@@ -124,7 +125,7 @@ async function scrapePlayerProfile(nickname) {
           eloChange = Math.round(sum / eloChanges.length);
         }
 
-        return { nickname: resolvedNickname, elo: elo, ranking: 'N/A', wins, losses, eloChange };
+        return { nickname: resolvedNickname, elo, ranking: 'N/A', wins, losses, eloChange };
       }
     } catch (err) {
       console.error('Erro na FACEIT API:', err.message);

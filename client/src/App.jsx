@@ -68,7 +68,7 @@ function App() {
 
   // Calcular mudança de ELO com +/- formato
   const formatEloChange = (change) => {
-    if (change === 0 || change === undefined) return '(+0)';
+    if (!change || change === 0) return '(+0)';
     if (change > 0) return `(+${change})`;
     return `(${change})`;
   };
@@ -126,30 +126,6 @@ function App() {
       <div className="info-section">
         <p>Para usar no OBS: Adicionar → Browser Source e copiar a URL</p>
         <code className="url-example">http://localhost:3000</code>
-      </div>
-    </div>
-  );
-}
-
-export default App;
-
-        {error && (
-          <div className="error-message">
-            <p>⚠️ {error}</p>
-          </div>
-        )}
-
-        {!playerData && !error && nickname && loading && (
-          <div className="loading">
-            <div className="spinner"></div>
-            <p>Buscando dados...</p>
-          </div>
-        )}
-
-        <div className="widget-footer">
-          <p>Para usar no OBS: Adicionar → Browser Source e copiar a URL</p>
-          <code className="url-example">http://localhost:3000</code>
-        </div>
       </div>
     </div>
   );
