@@ -2,16 +2,16 @@ import { useEffect, useMemo, useState } from 'react';
 import './App.css';
 
 const FACEIT_LEVEL_ICONS = {
-  1: 'https://support.faceit.com/hc/article_attachments/11345480868764',
-  2: 'https://support.faceit.com/hc/article_attachments/11345494083356',
-  3: 'https://support.faceit.com/hc/article_attachments/11345519346332',
-  4: 'https://support.faceit.com/hc/article_attachments/11345507782300',
-  5: 'https://support.faceit.com/hc/article_attachments/11345494079004',
-  6: 'https://support.faceit.com/hc/article_attachments/11345526591772',
-  7: 'https://support.faceit.com/hc/article_attachments/11345507775388',
-  8: 'https://support.faceit.com/hc/article_attachments/11345494072220',
-  9: 'https://support.faceit.com/hc/article_attachments/11345519335964',
-  10: 'https://support.faceit.com/hc/article_attachments/11345507770524'
+  1: '/assets/faceit-level/level-1.png',
+  2: '/assets/faceit-level/level-2.png',
+  3: '/assets/faceit-level/level-3.png',
+  4: '/assets/faceit-level/level-4.png',
+  5: '/assets/faceit-level/level-5.png',
+  6: '/assets/faceit-level/level-6.png',
+  7: '/assets/faceit-level/level-7.png',
+  8: '/assets/faceit-level/level-8.png',
+  9: '/assets/faceit-level/level-9.png',
+  10: '/assets/faceit-level/level-10.png'
 };
 
 function App() {
