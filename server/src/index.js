@@ -320,6 +320,17 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
+// Servir frontend buildado (monorepo: ../client/dist) quando existir
+const clientDistPath = path.join(__dirname, '..', '..', 'client', 'dist');
+if (fs.existsSync(clientDistPath)) {
+  app.use(express.static(clientDistPath));
+
+  // Para qualquer rota não-API, entrega o index.html (SPA fallback)
+  app.get(/^\/(?!api).*/, (req, res) => {
+    res.sendFile(path.join(clientDistPath, 'index.html'));
+  });
+}
+
 app.listen(PORT, () => {
   console.log(`Servidor FACEIT Widget rodando em http://localhost:${PORT}`);
 });

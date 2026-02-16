@@ -13,7 +13,7 @@ const FACEIT_LEVEL_ICONS = {
   9: 'https://support.faceit.com/hc/article_attachments/11345519335964',
   10: 'https://support.faceit.com/hc/article_attachments/11345507770524'
 };
-const FACEIT_RANK_HASH_ICON = './assets/svg/challenger-icon.svg';
+const FACEIT_RANK_HASH_ICON = 'https://support.faceit.com/hc/article_attachments/10525185033372';
 
 function App() {
   const params = useMemo(() => new URLSearchParams(window.location.search), []);
@@ -30,7 +30,9 @@ function App() {
   const [error, setError] = useState('');
   const [autoRefresh, setAutoRefresh] = useState(true);
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+  const API_URL =
+    import.meta.env.VITE_API_URL ||
+    (window.location.hostname === 'localhost' ? 'http://localhost:3001' : '');
 
   const inferLevelFromElo = (eloValue) => {
     const elo = Number(eloValue);
