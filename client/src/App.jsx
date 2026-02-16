@@ -13,7 +13,6 @@ const FACEIT_LEVEL_ICONS = {
   9: 'https://support.faceit.com/hc/article_attachments/11345519335964',
   10: 'https://support.faceit.com/hc/article_attachments/11345507770524'
 };
-const FACEIT_RANK_HASH_ICON = 'https://support.faceit.com/hc/article_attachments/10525185033372';
 
 function App() {
   const params = useMemo(() => new URLSearchParams(window.location.search), []);
@@ -155,7 +154,7 @@ function App() {
                 <div className="top-rank-badge" title={`Top ${playerData.rankingPosition}`}>
                   <span className="top-rank-number">#{playerData.rankingPosition}</span>
                   <span className="top-rank-emblem-wrap">
-                    <img src={FACEIT_RANK_HASH_ICON} alt="" className="top-rank-right-icon" />
+                    <span className="top-rank-right-icon" />
                   </span>
                 </div>
               ) : levelIcon ? (

@@ -69,6 +69,15 @@ async function fetchRankingPosition({ apiKey, game, region, playerId }) {
 async function scrapePlayerProfile(nickname) {
   // Se FACEIT API key estiver configurada, usa a API oficial primeiro
   const FACEIT_API_KEY = process.env.FACEIT_API_KEY;
+  const ALLOW_FACEIT_SCRAPING = process.env.ALLOW_FACEIT_SCRAPING === 'true';
+
+  if (!FACEIT_API_KEY && !ALLOW_FACEIT_SCRAPING) {
+    return {
+      error: 'FACEIT_API_KEY não configurada no servidor. Configure a chave no Railway para consultar os dados.',
+      nickname
+    };
+  }
+
   if (FACEIT_API_KEY) {
     try {
       // Busca jogador pela API
@@ -190,9 +199,35 @@ async function scrapePlayerProfile(nickname) {
           eloChange
         };
       }
+
+      if (playerResp.status === 404) {
+        return {
+          error: `Jogador "${nickname}" não encontrado na FACEIT.`,
+          nickname
+        };
+      }
+
+      if (playerResp.status === 401 || playerResp.status === 403) {
+        return {
+          error: 'FACEIT_API_KEY inválida ou sem permissão para este endpoint.',
+          nickname
+        };
+      }
+
+      if (!ALLOW_FACEIT_SCRAPING) {
+        return {
+          error: `Falha na API da FACEIT (status ${playerResp.status}).`,
+          nickname
+        };
+      }
     } catch (err) {
       console.error('Erro na FACEIT API:', err.message);
-      // segue para fallback de scraping
+      if (!ALLOW_FACEIT_SCRAPING) {
+        return {
+          error: 'Falha ao consultar FACEIT API. Verifique a FACEIT_API_KEY.',
+          nickname
+        };
+      }
     }
   }
   try {
