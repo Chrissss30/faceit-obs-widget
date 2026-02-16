@@ -13,6 +13,7 @@ const FACEIT_LEVEL_ICONS = {
   9: '/assets/faceit-level/level-9.png',
   10: '/assets/faceit-level/level-10.png'
 };
+const FACEIT_CHALLENGER_ICON = '/assets/svg/challenger-icon.svg';
 
 function App() {
   const params = useMemo(() => new URLSearchParams(window.location.search), []);
@@ -154,7 +155,7 @@ function App() {
                 <div className="top-rank-badge" title={`Top ${playerData.rankingPosition}`}>
                   <span className="top-rank-number">#{playerData.rankingPosition}</span>
                   <span className="top-rank-emblem-wrap">
-                    <span className="top-rank-right-icon" />
+                    <img src={FACEIT_CHALLENGER_ICON} alt="Challenger" className="top-rank-right-icon" />
                   </span>
                 </div>
               ) : levelIcon ? (
