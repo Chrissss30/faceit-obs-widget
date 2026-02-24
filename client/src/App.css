@@ -175,8 +175,8 @@ body {
 }
 
 .top-rank-right-icon {
-  width: 24px;
-  height: 24px;
+  width: 46px;
+  height: 46px;
   object-fit: contain;
   filter: saturate(1.05) contrast(1.05);
 }
