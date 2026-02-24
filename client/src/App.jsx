@@ -33,6 +33,9 @@ function App() {
   const API_URL =
     import.meta.env.VITE_API_URL ||
     (window.location.hostname === 'localhost' ? 'http://localhost:3001' : '');
+  const obsBaseUrl = `${window.location.origin}${window.location.pathname}`;
+  const obsNick = nickname.trim() || 'SEU_NICK';
+  const obsUrlExample = `${obsBaseUrl}?obs=1&nick=${encodeURIComponent(obsNick)}`;
 
   const inferLevelFromElo = (eloValue) => {
     const elo = Number(eloValue);
@@ -205,9 +208,7 @@ function App() {
       {!isObsMode && (
         <div className="info-section">
           <p>Para usar no OBS: Adicionar -&gt; Browser Source e copiar a URL</p>
-          <code className="url-example">
-            http://localhost:3000?obs=1&amp;nick={nickname || 'SEU_NICK'}
-          </code>
+          <code className="url-example">{obsUrlExample}</code>
         </div>
       )}
     </div>
